@@ -6,7 +6,7 @@ from PySide6.QtCore import QFile, QIODevice
 import os
 from openpyxl import load_workbook
 import xlrd
-
+import re
 
 
 
@@ -52,24 +52,47 @@ def processExcel():
         libro_trabajo = xlrd.open_workbook(path_file1)
         # Especifica el índice o el nombre de la hoja que deseas utilizar
         nombre_hoja = "Calidad de Servicio Técnico"
-
-        # Accede a la hoja deseada
-        hoja = libro_trabajo.sheet_by_name(nombre_hoja)
-
-        # Ahora puedes trabajar con la hoja normalmente
-        # Por ejemplo, imprimir el valor de la celda en la fila 0, columna 0
-        print(hoja.cell_value(13, 39))
-        print(hoja.cell_value(13, 40))
+        sheet = libro_trabajo.sheet_by_name(nombre_hoja)
+        print(sheet.cell_value(13, 38))
+        #print('celda 13 y 40',sheet.cell_value(13, 40))
+        cal_60 = []
+        for i in range(13,500):
+            try:
+                aux_cell = sheet.cell_value(i, 20)
+                fmi = sheet.cell_value(i, 39)
+                tki = sheet.cell_value(i, 40)
+                empty_dict_cal60 = {}
+                if aux_cell != '':
+                    name_descompuesto  = re.search(r'\((.*?)\)', aux_cell).group(1)
+                    empty_dict_cal60['name'] = name_descompuesto
+                    empty_dict_cal60['fmik'] = fmi
+                    empty_dict_cal60['ttik'] = tki
+                    print(empty_dict_cal60)
+                    cal_60.append(aux_cell)
+            except IndexError:
+                break
+        print(len(cal_60))
     else:
         pass
 
     if path_file2[-4:] == ".xls" or path_file2[-5:] == ".xlsx":
-     
-        password = "AAAAAAAAAAA"
+    
         workbook = load_workbook(path_file2,data_only=True)
         nombre_hoja = "Calidad de Servicio Técnico"
         sheet_target = workbook.active
-        print(sheet_target['A2'].value)
+        for i in range(17,330):
+            aux_cell = sheet_target[f'C{i}'].value
+            aux_fmi = sheet_target[f'I{i}'].value
+            aux_ttk = sheet_target[f'J{i}'].value
+            empty_dict = {}
+            if aux_cell != None:
+                name_descompuesto  = re.search(r'\((.*?)\)', aux_cell).group(1)
+                empty_dict['name'] = name_descompuesto
+                empty_dict['fmik'] = aux_fmi
+                empty_dict['ttik'] = aux_ttk
+                print(empty_dict)
+            else:
+                break
 
     else:
         pass
@@ -96,11 +119,23 @@ def processExcel():
         # print('8,13',sheet.cell_value(8, 13))
         # print('8,14',sheet.cell_value(8, 14))
         # print('8,15',sheet.cell_value(8, 15))
-        # print('9,7',sheet.cell_value(9, 7))
-        # print('10,7',sheet.cell_value(10, 7))
-        # print('11,7',sheet.cell_value(11, 7))
-        # print('12,7',sheet.cell_value(12, 7))
-        # print('13,7',sheet.cell_value(13, 7)) 
+
+        fmik_data = []
+        for i in range(9,750):
+            try:
+                aux_cell = sheet.cell_value(i, 7)
+                if aux_cell != '':
+                    name_descompuesto = aux_cell.split("_")
+                    aux_dic = {}
+                    if len(name_descompuesto) >=2:
+                        aux_dic['name'] = name_descompuesto[2].upper()
+                        aux_dic['fmik'] = sheet.cell_value(9, 22)
+                        aux_dic['ttik'] = sheet.cell_value(9, 23)
+                        print(aux_dic)
+
+
+            except IndexError:
+                break
 
     else:
         pass
