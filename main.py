@@ -1,13 +1,17 @@
 # File: main.py
 import sys
 from PySide6.QtUiTools import QUiLoader
-from PySide6.QtWidgets import QApplication,QFileDialog,QMessageBox
+from PySide6.QtWidgets import QApplication,QFileDialog,QMessageBox,QVBoxLayout,QFrame
 from PySide6.QtCore import QFile, QIODevice
+from PySide6.QtGui import QPixmap
 import os
 from openpyxl import load_workbook
 import xlrd
 import re
-
+import matplotlib
+matplotlib.use('Qt5Agg')
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
 
 
 #some init vars
@@ -15,8 +19,20 @@ path_file1 = ''
 path_file2 = ''
 path_file3 = ''
 
+db_wb = load_workbook('db_alimentadores.xlsx',data_only=True)
+sheet_db = db_wb.active
+lista_names = []
+for i in range(17,330):
+    aux_name = sheet_db[f'B{i}'].value
+    if aux_name == None:
+        break
+    else:
+        name_descompuesto  = re.search(r'\((.*?)\)', aux_name).group(1)
+        lista_names.append(name_descompuesto)
 
-#funcs
+
+
+
 def setSrcPath(file):
     global path_file1
     global path_file2
@@ -48,12 +64,14 @@ def processExcel():
     global path_file1
     global path_file2
     global path_file3
+    cal_60_aux = []
+    cal_stadist = []
+    cal_ttki = []
     if path_file1[-4:] == ".xls" or path_file1[-5:] == ".xlsx":
         libro_trabajo = xlrd.open_workbook(path_file1)
         # Especifica el índice o el nombre de la hoja que deseas utilizar
         nombre_hoja = "Calidad de Servicio Técnico"
         sheet = libro_trabajo.sheet_by_name(nombre_hoja)
-        print(sheet.cell_value(13, 38))
         #print('celda 13 y 40',sheet.cell_value(13, 40))
         cal_60 = []
         for i in range(13,500):
@@ -67,11 +85,23 @@ def processExcel():
                     empty_dict_cal60['name'] = name_descompuesto
                     empty_dict_cal60['fmik'] = fmi
                     empty_dict_cal60['ttik'] = tki
-                    print(empty_dict_cal60)
-                    cal_60.append(aux_cell)
+                    cal_60.append(empty_dict_cal60)
             except IndexError:
                 break
-        print(len(cal_60))
+       
+        for i in lista_names:
+            new_dict = {'name':i,'ttik':0,'fmik':0}
+            counter = 0
+            for j in cal_60:
+                if j['name'] == i:
+                    counter +=1
+                    new_dict['fmik'] = new_dict['fmik'] + float(j['fmik']) 
+                    new_dict['ttik'] = new_dict['ttik'] + float(j['ttik'])
+       
+            cal_60_aux.append(new_dict)
+
+
+        
     else:
         pass
 
@@ -90,7 +120,7 @@ def processExcel():
                 empty_dict['name'] = name_descompuesto
                 empty_dict['fmik'] = aux_fmi
                 empty_dict['ttik'] = aux_ttk
-                print(empty_dict)
+                cal_stadist.append(empty_dict)
             else:
                 break
 
@@ -105,22 +135,6 @@ def processExcel():
         # Accede a la hoja deseada
         sheet = workbook.sheet_by_index(0)
 
-        # Ahora puedes trabajar con la hoja normalmente
-        # Por ejemplo, imprimir el valor de la celda en la fila 0, columna 0
-        # print('8,4',sheet.cell_value(8, 4))
-        # print('8,5',sheet.cell_value(8, 5))
-        # print('8,6',sheet.cell_value(8, 6))
-        # print('8,7',sheet.cell_value(8, 7))
-        # print('8,8',sheet.cell_value(8, 8))
-        # print('8,9',sheet.cell_value(8, 9))
-        # print('8,10',sheet.cell_value(8, 10))
-        # print('8,11',sheet.cell_value(8, 11))
-        # print('8,12',sheet.cell_value(8, 12))
-        # print('8,13',sheet.cell_value(8, 13))
-        # print('8,14',sheet.cell_value(8, 14))
-        # print('8,15',sheet.cell_value(8, 15))
-
-        fmik_data = []
         for i in range(9,750):
             try:
                 aux_cell = sheet.cell_value(i, 7)
@@ -131,20 +145,41 @@ def processExcel():
                         aux_dic['name'] = name_descompuesto[2].upper()
                         aux_dic['fmik'] = sheet.cell_value(9, 22)
                         aux_dic['ttik'] = sheet.cell_value(9, 23)
-                        print(aux_dic)
-
-
+                        cal_ttki.append(aux_dic)
             except IndexError:
                 break
 
     else:
         pass
-    # libro_trabajo = openpyxl.load_workbook(path_file1,data_only=True)
-    # hoja = libro_trabajo['Calidad de Servicio Técnico']
-    # print(hoja['C17'].value)
-    # print(hoja['AG17'].value)
-    # print(hoja['AH17'].value)
-    # libro_trabajo.close()
+    # en esta linea concatanamos todos los datos
+    nombres_selectos = []
+    for x in lista_names:
+        c1 = False
+        c2 = False
+        c3 = False
+        aux_1 = {'name':x,'file1':[0,0],'file2':[0,0],'file3':[0,0]}
+        for d1 in cal_60_aux:
+            if d1['name'] == x:
+                aux_1['file1'] = [d1['fmik'],d1['ttik']]
+                c1 = True
+                break
+        for d2 in cal_stadist:
+            if d2['name'] == x:
+                aux_1['file2'] = [d2['fmik'],d2['ttik']]
+                c2 = True
+                break
+        for d3 in cal_ttki:
+            if d3['name'] == x:
+                aux_1['file3'] = [d3['fmik'],d3['ttik']]
+                c3 = True
+                break
+        if c1 and c2 and c3:
+            nombres_selectos.append(aux_1)
+    if len(nombres_selectos) > 0:
+        for name in nombres_selectos:
+            window.listData.addItem(name['name'])
+    
+
 
 
 if __name__ == "__main__":
@@ -161,6 +196,23 @@ if __name__ == "__main__":
     window.btnFile2.clicked.connect(lambda: setSrcPath(2))
     window.btnFile3.clicked.connect(lambda: setSrcPath(3))
     window.btnProcess.clicked.connect(lambda: processExcel())
+    fig = Figure(figsize=(5, 4), dpi=100)
+    canvas = FigureCanvas(fig)
+    ax = fig.add_subplot(111)
+
+        # Dibujar en la figura (puedes personalizar esto según tus necesidades)
+    categorias = ['A', 'B', 'C', 'D']
+    valores = [3, 7, 1, 9]
+    ax.bar(categorias, valores)
+    ax.set_xlabel('Categorías')
+    ax.set_ylabel('Valores')
+    ax.set_title('Gráfico de Barras')
+
+    frame = window.findChild(QFrame, "graph")
+    layout = QVBoxLayout(frame)
+    layout.addWidget(canvas)
+    frame.setLayout(layout)
+
     ui_file.close()
     if not window:
         print(loader.errorString())
