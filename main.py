@@ -191,7 +191,7 @@ def nombreSelected():
     canvas = FigureCanvas(fig)
     ax = fig.add_subplot(111)
 
-    categorias = ['f1 fmik', 'f1 ttik', 'f2 fmik', 'f2 ttik','f3 fmik', 'f3 ttik',]
+    categorias = ['f1', 'f1', 'f2', 'f2','f3', 'f3',]
     valores = [3, 7, 3, 9,4,5]
     ax.bar(categorias, valores)
     
@@ -199,10 +199,10 @@ def nombreSelected():
     ax.set_ylabel('Valores')
     ax.set_title('Gráfico de Barras')
 
-    frame = window.findChild(QFrame, "graph")
-    layout = QVBoxLayout(frame)
+    #frame = window.findChild(QFrame, "graph")
+    layout = QVBoxLayout()
     layout.addWidget(canvas)
-    frame.setLayout(layout)
+    window.graph.setLayout(layout)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
