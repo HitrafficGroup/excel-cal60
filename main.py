@@ -3,7 +3,6 @@ import sys
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import QApplication,QFileDialog,QMessageBox,QVBoxLayout,QFrame
 from PySide6.QtCore import QFile, QIODevice
-from PySide6.QtGui import QPixmap
 import os
 from openpyxl import load_workbook
 import xlrd
@@ -31,7 +30,7 @@ for i in range(17,330):
         lista_names.append(name_descompuesto)
 
 
-
+all_datos = []
 
 def setSrcPath(file):
     global path_file1
@@ -64,6 +63,7 @@ def processExcel():
     global path_file1
     global path_file2
     global path_file3
+    global all_datos
     cal_60_aux = []
     cal_stadist = []
     cal_ttki = []
@@ -175,12 +175,34 @@ def processExcel():
                 break
         if c1 and c2 and c3:
             nombres_selectos.append(aux_1)
+            all_datos.append(aux_1)
+
     if len(nombres_selectos) > 0:
         for name in nombres_selectos:
             window.listData.addItem(name['name'])
     
 
+def nombreSelected():
+    
+    ###
+    selected_value = window.listData.currentText()
+    print(f"Valor seleccionado: {selected_value}")
+    fig = Figure(figsize=(5, 4), dpi=100)
+    canvas = FigureCanvas(fig)
+    ax = fig.add_subplot(111)
 
+    categorias = ['f1 fmik', 'f1 ttik', 'f2 fmik', 'f2 ttik','f3 fmik', 'f3 ttik',]
+    valores = [3, 7, 3, 9,4,5]
+    ax.bar(categorias, valores)
+    
+    ax.set_xlabel('Categorías')
+    ax.set_ylabel('Valores')
+    ax.set_title('Gráfico de Barras')
+
+    frame = window.findChild(QFrame, "graph")
+    layout = QVBoxLayout(frame)
+    layout.addWidget(canvas)
+    frame.setLayout(layout)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
@@ -196,22 +218,9 @@ if __name__ == "__main__":
     window.btnFile2.clicked.connect(lambda: setSrcPath(2))
     window.btnFile3.clicked.connect(lambda: setSrcPath(3))
     window.btnProcess.clicked.connect(lambda: processExcel())
-    fig = Figure(figsize=(5, 4), dpi=100)
-    canvas = FigureCanvas(fig)
-    ax = fig.add_subplot(111)
+    window.listData.currentIndexChanged.connect(lambda: nombreSelected())
 
-        # Dibujar en la figura (puedes personalizar esto según tus necesidades)
-    categorias = ['A', 'B', 'C', 'D']
-    valores = [3, 7, 1, 9]
-    ax.bar(categorias, valores)
-    ax.set_xlabel('Categorías')
-    ax.set_ylabel('Valores')
-    ax.set_title('Gráfico de Barras')
-
-    frame = window.findChild(QFrame, "graph")
-    layout = QVBoxLayout(frame)
-    layout.addWidget(canvas)
-    frame.setLayout(layout)
+    
 
     ui_file.close()
     if not window:
