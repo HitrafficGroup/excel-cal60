@@ -12,7 +12,8 @@ import matplotlib as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import numpy as np
-
+import openpyxl
+from openpyxl.chart import BarChart, Reference
 #some init vars
 path_file1 = ''
 path_file2 = ''
@@ -21,7 +22,7 @@ path_file3 = ''
 db_wb = load_workbook('db_alimentadores.xlsx',data_only=True)
 sheet_db = db_wb.active
 lista_names = []
-for i in range(17,330):
+for i in range(6,330):
     aux_name = sheet_db[f'B{i}'].value
     if aux_name == None:
         break
@@ -31,6 +32,7 @@ for i in range(17,330):
 
 
 all_datos = []
+current_target = {}
 
 class MatplotlibWidget(QWidget):
     def __init__(self, parent=None):
@@ -55,6 +57,33 @@ class MatplotlibWidget(QWidget):
         # Crear un layout vertical para el widget y agregar el lienzo de Matplotlib
         layout = QVBoxLayout(self)
         layout.addWidget(self.canvas)
+
+def excelGenerar():
+    global current_target
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    data = [
+        ['Categoria', 'Valor'],
+        ['fmik file1', current_target['file1'][0]],
+        ['ttik file1', current_target['file1'][1]],
+        ['fmik file2', current_target['file2'][0]],
+        ['ttik file2', current_target['file2'][1]],
+        ['fmik file3', current_target['file3'][0]],
+        ['ttik file3', current_target['file3'][1]],
+    ]
+    for row in data:
+        sheet.append(row)
+    chart = BarChart()
+    data = Reference(sheet, min_col=2, min_row=1, max_col=2, max_row=len(data))
+    categories = Reference(sheet, min_col=1, min_row=2, max_row=len(data))
+
+    chart.add_data(data, titles_from_data=True)
+    chart.set_categories(categories)
+    sheet.add_chart(chart, "E5")
+
+    # Guardar el archivo Excel
+    workbook.save("grafico_barras.xlsx")
+
 
 def setSrcPath(file):
     global path_file1
@@ -81,7 +110,7 @@ def setSrcPath(file):
         alerta.setStandardButtons(QMessageBox.Ok)
         alerta.setDefaultButton(QMessageBox.Ok)
         alerta.exec()
-    print(path_file1)
+
 
 def processExcel():
     global path_file1
@@ -112,7 +141,6 @@ def processExcel():
                     cal_60.append(empty_dict_cal60)
             except IndexError:
                 break
-       
         for i in lista_names:
             new_dict = {'name':i,'ttik':0,'fmik':0}
             counter = 0
@@ -121,11 +149,8 @@ def processExcel():
                     counter +=1
                     new_dict['fmik'] = new_dict['fmik'] + float(j['fmik']) 
                     new_dict['ttik'] = new_dict['ttik'] + float(j['ttik'])
-       
-            cal_60_aux.append(new_dict)
-
-
-        
+            if counter != 0:
+                cal_60_aux.append(new_dict)
     else:
         pass
 
@@ -166,9 +191,14 @@ def processExcel():
                     name_descompuesto = aux_cell.split("_")
                     aux_dic = {}
                     if len(name_descompuesto) >=2:
+                        for x in range(i,i+50):
+                            total_aux = sheet.cell_value(x, 10)
+                            if total_aux == 'Total Alimentador':
+                                aux_dic['fmik'] = sheet.cell_value(x, 22)
+                                aux_dic['ttik'] = sheet.cell_value(x, 24)
+                                break
                         aux_dic['name'] = name_descompuesto[2].upper()
-                        aux_dic['fmik'] = sheet.cell_value(i, 22)
-                        aux_dic['ttik'] = sheet.cell_value(i, 23)
+    
                         cal_ttki.append(aux_dic)
             except IndexError:
                 break
@@ -184,6 +214,7 @@ def processExcel():
         aux_1 = {'name':x,'file1':[0,0],'file2':[0,0],'file3':[0,0]}
         for d1 in cal_60_aux:
             if d1['name'] == x:
+            
                 aux_1['file1'] = [d1['fmik'],d1['ttik']]
                 c1 = True
                 break
@@ -199,27 +230,39 @@ def processExcel():
                 break
         if c1 and c2 and c3:
             nombres_selectos.append(aux_1)
+
             all_datos.append(aux_1)
 
     if len(nombres_selectos) > 0:
         for name in nombres_selectos:
             window.listData.addItem(name['name'])
-    
+    window.ctd.setText(str(len(nombres_selectos)))
 
 def nombreSelected():
     global all_datos
+    global current_target
     ###
     current_data = {}
     selected_value = window.listData.currentText()
     for i in all_datos:
         if i['name'] == selected_value:
             current_data = i
+    current_target = current_data
+    window.alimentador.setText(current_data['name'])
+   
+    window.cal1.setText(str(current_data['file1'][0]))
+    window.cal2.setText(str(current_data['file1'][1]))
+    window.sis1.setText(str(current_data['file2'][0]))
+    window.sis2.setText(str(current_data['file2'][1]))
+    window.adms1.setText(str(current_data['file3'][0]))
+    window.adms2.setText(str(current_data['file3'][1]))
+
     updateGraph(current_data)
 
 
 def updateGraph(current_data):
         # Obtener el widget Matplotlib y la figura
-        categorias = ['f1', 'f_1', 'f2', 'f_2','f3', 'f_3']
+        categorias = ['cal60 fmik', 'cal60 ttik', 'sisdat fmik', 'sisdat ttik','adms fmik', 'adms ttik']
         valores = [current_data['file1'][0], current_data['file1'][1], current_data['file2'][0], current_data['file2'][1],current_data['file3'][0],current_data['file3'][1]]
         frame = window.graph
         matplotlib_widget = frame.layout().itemAt(0).widget()
@@ -249,6 +292,7 @@ if __name__ == "__main__":
     window.btnFile3.clicked.connect(lambda: setSrcPath(3))
     window.btnProcess.clicked.connect(lambda: processExcel())
     window.listData.currentIndexChanged.connect(lambda: nombreSelected())
+    window.btnExcel.clicked.connect(lambda: excelGenerar())
     matplotlib_widget = MatplotlibWidget(window.graph)
     layout = QVBoxLayout()
     layout.addWidget(matplotlib_widget)
