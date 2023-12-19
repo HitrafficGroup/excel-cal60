@@ -33,6 +33,7 @@ for i in range(6,330):
 
 all_datos = []
 current_target = {}
+parametros_sisdat = {'ttik':0,'fmik':0}
 
 class MatplotlibWidget(QWidget):
     def __init__(self, parent=None):
@@ -44,44 +45,88 @@ class MatplotlibWidget(QWidget):
         # Crear una figura de Matplotlib
         self.fig = Figure(figsize=(5, 4), dpi=100)
         self.canvas = FigureCanvas(self.fig)
-
         # Crear datos para el gráfico
         x = np.linspace(0, 5, 100)
         y = np.sin(x)
-
         # Dibujar en la figura
         ax = self.fig.add_subplot(111)
         ax.plot(x, y)
         ax.set_title('Gráfico de Matplotlib')
-
-        # Crear un layout vertical para el widget y agregar el lienzo de Matplotlib
         layout = QVBoxLayout(self)
         layout.addWidget(self.canvas)
 
 def excelGenerar():
     global current_target
+    global all_datos
+
     workbook = openpyxl.Workbook()
-    sheet = workbook.active
-    data = [
-        ['Categoria', 'Valor'],
-        ['fmik file1', current_target['file1'][0]],
-        ['ttik file1', current_target['file1'][1]],
-        ['fmik file2', current_target['file2'][0]],
-        ['ttik file2', current_target['file2'][1]],
-        ['fmik file3', current_target['file3'][0]],
-        ['ttik file3', current_target['file3'][1]],
-    ]
-    for row in data:
-        sheet.append(row)
-    chart = BarChart()
-    data = Reference(sheet, min_col=2, min_row=1, max_col=2, max_row=len(data))
-    categories = Reference(sheet, min_col=1, min_row=2, max_row=len(data))
+    ws = workbook.active
+    format_data = [
+                        ('','CAL-60','','SISDAT','','ADMS',''),
+                        ('Alimentador','FMIK', 'TTIK','FMIK','TTIK','FMIK', 'TTIK')
+                    ]
+    for data in all_datos:
+        new_dato = (data['name'],data['file1'][0],data['file1'][1],data['file2'][0],data['file2'][1],data['file3'][0],data['file3'][1])
+        format_data.append(new_dato)
 
-    chart.add_data(data, titles_from_data=True)
-    chart.set_categories(categories)
-    sheet.add_chart(chart, "E5")
 
-    # Guardar el archivo Excel
+    rows = format_data
+
+
+    for row in rows:
+        ws.append(row)
+
+
+    ws.merge_cells('B1:C1')
+    ws.merge_cells('D1:E1')
+    ws.merge_cells('F1:G1')
+
+
+    counter = 1
+    for i in range(3,len(rows)+1):
+        chart1 = BarChart()
+        chart1.type = "col"
+        chart1.style = 10
+        chart1.title = rows[i-1][0]
+        chart1.y_axis.title = 'V1.1'
+        chart1.x_axis.title = 'Sample length (mm)'
+        data = Reference(ws, min_col=2, min_row=i, max_row=i, max_col=7)
+        cats = Reference(ws, min_col=1, min_row=i, max_row=i)
+        chart1.add_data(data, titles_from_data=True)
+        chart1.set_categories(cats)
+        chart1.shape = 4
+        ws.add_chart(chart1, f"I{counter}")
+        counter +=19
+    workbook.save("grafico_barras.xlsx")
+
+def auxGenerarExcel():
+    workbook = openpyxl.Workbook()
+    ws = workbook.active
+    format_data = [
+                        ('','CAL-60','','SISDAT','','ADMS',''),
+                        ('Alimentador','FMIK', 'TTIK','FMIK','TTIK','FMIK', 'TTIK')
+                    ]
+    for data in all_datos:
+        new_dato = (data['name'],data['file1'][0],data['file1'][1],data['file2'][0],data['file2'][1],data['file3'][0],data['file3'][1])
+        format_data.append(new_dato)
+    rows = format_data
+    for row in rows:
+        ws.append(row)
+    ws.merge_cells('B1:C1')
+    ws.merge_cells('D1:E1')
+    ws.merge_cells('F1:G1')
+    chart1 = BarChart()
+    chart1.type = "col"
+    chart1.style = 10
+    chart1.title = 'Graficas de Alimentadores'
+    chart1.y_axis.title = 'Valores'
+    chart1.x_axis.title = f'Alimentadores Totales {len(format_data)}'
+    data = Reference(ws, min_col=2, min_row=2, max_row=len(rows), max_col=7)
+    cats = Reference(ws, min_col=1, min_row=3, max_row=len(rows))
+    chart1.add_data(data, titles_from_data=True)
+    chart1.set_categories(cats)
+    chart1.shape = 4
+    ws.add_chart(chart1, f"I3")
     workbook.save("grafico_barras.xlsx")
 
 
@@ -117,6 +162,7 @@ def processExcel():
     global path_file2
     global path_file3
     global all_datos
+    global parametros_sisdat
     cal_60_aux = []
     cal_stadist = []
     cal_ttki = []
@@ -159,10 +205,14 @@ def processExcel():
         workbook = load_workbook(path_file2,data_only=True)
         nombre_hoja = "Calidad de Servicio Técnico"
         sheet_target = workbook.active
+        parametros_sisdat['fmik'] = sheet_target['I10'].value
+        parametros_sisdat['ttik'] = sheet_target['J10'].value
         for i in range(17,330):
             aux_cell = sheet_target[f'C{i}'].value
             aux_fmi = sheet_target[f'I{i}'].value
             aux_ttk = sheet_target[f'J{i}'].value
+            toal_fmik = 0
+            total_ttik = 0
             empty_dict = {}
             if aux_cell != None:
                 name_descompuesto  = re.search(r'\((.*?)\)', aux_cell).group(1)
@@ -230,13 +280,15 @@ def processExcel():
                 break
         if c1 and c2 and c3:
             nombres_selectos.append(aux_1)
-
+           
             all_datos.append(aux_1)
-
+    lista_ordenada = sorted(nombres_selectos, key=lambda x: x['name'])
     if len(nombres_selectos) > 0:
-        for name in nombres_selectos:
+        for name in lista_ordenada:
             window.listData.addItem(name['name'])
     window.ctd.setText(str(len(nombres_selectos)))
+    window.fmik_total.setText(str(parametros_sisdat['fmik']))
+    window.ttik_total.setText(str(parametros_sisdat['ttik']))
 
 def nombreSelected():
     global all_datos
@@ -292,7 +344,7 @@ if __name__ == "__main__":
     window.btnFile3.clicked.connect(lambda: setSrcPath(3))
     window.btnProcess.clicked.connect(lambda: processExcel())
     window.listData.currentIndexChanged.connect(lambda: nombreSelected())
-    window.btnExcel.clicked.connect(lambda: excelGenerar())
+    window.btnExcel.clicked.connect(lambda: auxGenerarExcel())
     matplotlib_widget = MatplotlibWidget(window.graph)
     layout = QVBoxLayout()
     layout.addWidget(matplotlib_widget)
