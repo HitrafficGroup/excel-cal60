@@ -62,8 +62,7 @@ def excelGenerar():
     workbook = openpyxl.Workbook()
     ws = workbook.active
     format_data = [
-                        ('','CAL-60','','SISDAT','','ADMS',''),
-                        ('Alimentador','FMIK', 'TTIK','FMIK','TTIK','FMIK', 'TTIK')
+            ('','CAL-60','','SISDAT','','ADMS',''),('Alimentador','FMIK', 'TTIK','FMIK','TTIK','FMIK', 'TTIK')
                     ]
     for data in all_datos:
         new_dato = (data['name'],data['file1'][0],data['file1'][1],data['file2'][0],data['file2'][1],data['file3'][0],data['file3'][1])
@@ -158,6 +157,7 @@ def setSrcPath(file):
 
 
 def processExcel():
+    window.listData.clear()
     global path_file1
     global path_file2
     global path_file3
@@ -274,7 +274,7 @@ def processExcel():
                 break
         for d3 in cal_ttki:
             if d3['name'] == x:
-                aux_1['file3'] = [d3['fmik'],d3['ttik']]
+                aux_1['file3'] = [d3['fmik'],d3['ttik']] 
                 c3 = True
                 break
         if c1 and c2 and c3:
@@ -299,7 +299,6 @@ def nombreSelected():
             current_data = i
     current_target = current_data
     window.alimentador.setText(current_data['name'])
-   
     window.cal1.setText(str(current_data['file1'][0]))
     window.cal2.setText(str(current_data['file1'][1]))
     window.sis1.setText(str(current_data['file2'][0]))
@@ -329,7 +328,6 @@ def updateGraph(current_data):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-
     ui_file_name = "mainwindow.ui"
     ui_file = QFile(ui_file_name)
     if not ui_file.open(QIODevice.ReadOnly):
