@@ -280,6 +280,7 @@ def processExcel():
         if c1 and c2 and c3:
             nombres_selectos.append(aux_1)
             all_datos.append(aux_1)
+            print(aux_1)
     lista_ordenada = sorted(nombres_selectos, key=lambda x: x['name'])
     if len(nombres_selectos) > 0:
         for name in lista_ordenada:

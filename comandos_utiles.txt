@@ -1,0 +1,3 @@
+COMANDOS PARA GENERAR ARCHIVO EJECUTABLE
+pyinstaller --onefile --noconsole main.py
+
