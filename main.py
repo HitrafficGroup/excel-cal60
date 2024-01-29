@@ -258,26 +258,28 @@ def processExcel():
     # en esta linea concatanamos todos los datos
     nombres_selectos = []
     for x in lista_names:
-        c1 = False
-        c2 = False
-        c3 = False
         aux_1 = {'name':x,'file1':[0,0],'file2':[0,0],'file3':[0,0]}
+        rule = False
         for d1 in cal_60_aux:
             if d1['name'] == x:
                 aux_1['file1'] = [d1['fmik'],d1['ttik']]
-                c1 = True
+                rule = True
                 break
+            else:
+                aux_1['file1'] = [0,0]
         for d2 in cal_stadist:
             if d2['name'] == x:
                 aux_1['file2'] = [d2['fmik'],d2['ttik']]
-                c2 = True
                 break
+            else:
+                aux_1['file2'] = [0,0]
         for d3 in cal_ttki:
             if d3['name'] == x:
                 aux_1['file3'] = [d3['fmik'],d3['ttik']] 
-                c3 = True
                 break
-        if c1 and c2 and c3:
+            else:
+                aux_1['file3'] = [0,0] 
+        if rule:
             nombres_selectos.append(aux_1)
             all_datos.append(aux_1)
             print(aux_1)
